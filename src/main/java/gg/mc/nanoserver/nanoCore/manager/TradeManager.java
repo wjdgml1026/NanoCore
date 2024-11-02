@@ -71,10 +71,14 @@ public class TradeManager {
 
             Player player = plugin.getServer().getPlayer(uuid);
             if ( player != null && player.isOnline() ) {
-                TradeInventory tradeInventory = new TradeInventory(player, target);
-                player.openInventory(tradeInventory.getInventory());
+                TradeInventory holder1 = new TradeInventory(player, target);
+                TradeInventory holder2 = new TradeInventory(target, player);
+                holder1.setOtherHolder(holder2);
+                holder2.setOtherHolder(holder1);
+
+                player.openInventory(holder1.getInventory());
                 player.playSound(target.getLocation(), Sound.ENTITY_WANDERING_TRADER_YES, 1.5f, 0.8f);
-                target.openInventory(tradeInventory.getInventory());
+                target.openInventory(holder2.getInventory());
                 target.playSound(target.getLocation(), Sound.ENTITY_WANDERING_TRADER_YES, 1.5f, 0.8f);
             } else {
                 target.playSound(target.getLocation(), Sound.ENTITY_WANDERING_TRADER_NO, 1.5f, 0.8f);

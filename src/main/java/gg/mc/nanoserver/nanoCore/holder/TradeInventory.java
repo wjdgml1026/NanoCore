@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -15,32 +16,31 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import static gg.mc.nanoserver.nanoCore.NanoCore.plugin;
 
 public class TradeInventory implements InventoryHolder {
-    public final static ItemStack BORDER, BARRIER, Y, N, TIME1, TIME2, TIME3;
-    public final static int[] BORDER_SLOT = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    private final static ItemStack BORDER, EMPTY, Y, N, TIME1, TIME2, TIME3;
+    private final static int[] BORDER_SLOT = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
             18, 27, 36, 13, 22, 31, 40, 17, 26, 35, 44,
             45, 46, 48, 49, 50, 52, 53
     };
-    public final static List<Integer> PLAYER1_BARRIER = Arrays.asList(39, 38, 37, 30, 29, 28, 21, 20, 19, 12, 11, 10);
-    public final static Set<Integer> PLAYER1_SLOT = new HashSet<>(PLAYER1_BARRIER);
-    public final static List<Integer> PLAYER2_BARRIER = Arrays.asList(43, 42, 41, 34, 33, 32, 25, 24, 23, 16, 15, 14);
-    public final static Set<Integer> PLAYER2_SLOT = new HashSet<>(PLAYER2_BARRIER);
 
-    public final int YN1_SLOT = 47;
-    public final int YN2_SLOT = 51;
-    public final int TIMER_SLOT = 31;
+    private final static Set<Integer> MY_SLOT = new HashSet<>(Arrays.asList(39, 38, 37, 30, 29, 28, 21, 20, 19, 12, 11, 10));
+    private final static Set<Integer> OTHER_SLOT = new HashSet<>(Arrays.asList(43, 42, 41, 34, 33, 32, 25, 24, 23, 16, 15, 14));
 
-    public boolean isEnd = false;
+    private final int YN1_SLOT = 47;
+    private final int YN2_SLOT = 51;
+    private final int TIMER_SLOT = 31;
 
-    public final Inventory inventory;
-    public final Player player1, player2;
+    private boolean isEnd = false;
 
-    int ticks = 0;
+    private TradeInventory otherHolder;
+    private final Inventory inventory;
+    private final Player player;
+
+    private int ticks = 0;
 
     static {
         ItemMeta itemMeta;
@@ -50,10 +50,10 @@ public class TradeInventory implements InventoryHolder {
         itemMeta.setDisplayName(" ");
         BORDER.setItemMeta(itemMeta);
 
-        BARRIER = new ItemStack(Material.BARRIER);
-        itemMeta = BARRIER.getItemMeta();
-        itemMeta.setDisplayName(ChatColor.RED + "상대방 인벤토리 슬롯이 부족합니다.");
-        BARRIER.setItemMeta(itemMeta);
+        EMPTY = new ItemStack(Material.WHITE_STAINED_GLASS_PANE);
+        itemMeta = EMPTY.getItemMeta();
+        itemMeta.setDisplayName(" ");
+        EMPTY.setItemMeta(itemMeta);
 
         Y = new ItemStack(Material.GREEN_STAINED_GLASS_PANE);
         itemMeta = Y.getItemMeta();
@@ -81,31 +81,15 @@ public class TradeInventory implements InventoryHolder {
         TIME3.setItemMeta(itemMeta);
     }
 
-    public TradeInventory(Player player1, Player player2) {
-        this.inventory = plugin.getServer().createInventory(this, 54, player1.getName() + " <-> " + player2.getName());
-        this.player1 = player1;
-        this.player2 = player2;
+    public TradeInventory(Player player, Player other) {
+        this.inventory = plugin.getServer().createInventory(this, 54, player.getName() + " <-> " + other.getName());
+        this.player = player;
 
         for (int i : BORDER_SLOT) {
             inventory.setItem(i, BORDER);
         }
-
         inventory.setItem(YN1_SLOT, N);
         inventory.setItem(YN2_SLOT, N);
-
-        int count = countEmptySlot(player1.getInventory());
-        if (count < 12) {
-            for (int i = 0; i < 12 - count; i++) {
-                inventory.setItem(PLAYER1_BARRIER.get(i), BARRIER);
-            }
-        }
-
-        count = countEmptySlot(player1.getInventory());
-        if (count < 12) {
-            for (int i = 0; i < 12 - count; i++) {
-                inventory.setItem(PLAYER2_BARRIER.get(i), BARRIER);
-            }
-        }
     }
 
     private int countEmptySlot(Inventory inventory) {
@@ -118,9 +102,26 @@ public class TradeInventory implements InventoryHolder {
         return emptyCount;
     }
 
+    public void setOtherHolder(TradeInventory otherHolder) {
+        this.otherHolder = otherHolder;
+    }
+
+    public void playSound(Sound sound) {
+        player.playSound(player.getLocation(), sound, 1.5f, 0.8f);
+        otherHolder.getPlayer().playSound(player.getLocation(), sound, 1.5f, 0.8f);
+    }
+
     @Override
     public @NotNull Inventory getInventory() {
         return inventory;
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public boolean isEnd() {
+        return isEnd;
     }
 
     public void onDrag(InventoryDragEvent e) {
@@ -128,50 +129,47 @@ public class TradeInventory implements InventoryHolder {
     }
 
     public void onClick(InventoryClickEvent e) {
-        if (e.getWhoClicked().getInventory().equals(e.getClickedInventory())) return;
-
-        if (PLAYER1_SLOT.contains(e.getSlot())) {
-            if (!e.getWhoClicked().equals(player1)) {
-                e.setCancelled(true);
-            }
+        if (e.getWhoClicked().getInventory().equals(e.getClickedInventory()))
             return;
-        } else if (PLAYER2_SLOT.contains(e.getSlot())) {
-            if (!e.getWhoClicked().equals(player2)) {
-                e.setCancelled(true);
+        if (MY_SLOT.contains(e.getSlot())) {
+            if (!BORDER.isSimilar(inventory.getItem(TIMER_SLOT))) {
+                inventory.setItem(TIMER_SLOT, BORDER);
+                otherHolder.getInventory().setItem(TIMER_SLOT, BORDER);
+
+                inventory.setItem(YN1_SLOT, N);
+                inventory.setItem(YN2_SLOT, N);
+                otherHolder.getInventory().setItem(YN1_SLOT, N);
+                otherHolder.getInventory().setItem(YN2_SLOT, N);
+
+                playSound(Sound.ENTITY_VILLAGER_NO);
             }
+            player.playSound(player.getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_ON, 2f, 0.8f);
+            final int slot = e.getSlot();
+            plugin.getServer().getScheduler().runTaskTimer(plugin, task -> {
+                otherHolder.getInventory().setItem(slot + 4, inventory.getItem(slot));
+                otherHolder.getPlayer().playSound(otherHolder.getPlayer().getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_ON, 2f, 0.8f);
+                task.cancel();
+            }, 1, 1);
             return;
         }
+        
         e.setCancelled(true);
 
         if (e.getSlot() == YN1_SLOT) {
-            if (e.getWhoClicked().equals(player1)) {
-                if (N.isSimilar(e.getCurrentItem())) {
-                    inventory.setItem(YN1_SLOT, Y);
-                    player1.playSound(player1.getLocation(), Sound.ENTITY_VILLAGER_YES, 1.5f, 0.8f);
-                    player2.playSound(player1.getLocation(), Sound.ENTITY_VILLAGER_YES, 1.5f, 0.8f);
-                    if ( Y.isSimilar(inventory.getItem(YN2_SLOT)) ) {
-                        confirmTrade();
-                    }
-                } else {
-                    inventory.setItem(YN1_SLOT, N);
-                    player1.playSound(player1.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.5f, 0.8f);
-                    player2.playSound(player1.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.5f, 0.8f);
+            if (N.isSimilar(e.getCurrentItem())) {
+                inventory.setItem(YN1_SLOT, Y);
+                otherHolder.getInventory().setItem(YN2_SLOT, Y);
+
+                playSound(Sound.ENTITY_VILLAGER_YES);
+
+                if ( Y.isSimilar(otherHolder.getInventory().getItem(YN1_SLOT)) ) {
+                    confirmTrade();
                 }
-            }
-        } else if (e.getSlot() == YN2_SLOT) {
-            if (e.getWhoClicked().equals(player2)) {
-                if (N.isSimilar(e.getCurrentItem())) {
-                    inventory.setItem(YN2_SLOT, Y);
-                    player1.playSound(player2.getLocation(), Sound.ENTITY_VILLAGER_YES, 1.5f, 0.8f);
-                    player2.playSound(player2.getLocation(), Sound.ENTITY_VILLAGER_YES, 1.5f, 0.8f);
-                    if (Y.isSimilar(inventory.getItem(YN1_SLOT))) {
-                        confirmTrade();
-                    }
-                } else {
-                    inventory.setItem(YN2_SLOT, N);
-                    player1.playSound(player2.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.5f, 0.8f);
-                    player2.playSound(player2.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.5f, 0.8f);
-                }
+            } else {
+                inventory.setItem(YN1_SLOT, N);
+                otherHolder.getInventory().setItem(YN2_SLOT, N);
+
+                playSound(Sound.ENTITY_VILLAGER_NO);
             }
         }
     }
@@ -179,33 +177,39 @@ public class TradeInventory implements InventoryHolder {
     private void confirmTrade() {
         ticks = 0;
         inventory.setItem(TIMER_SLOT, TIME1);
+        otherHolder.getInventory().setItem(TIMER_SLOT, TIME1);
 
         plugin.getServer().getScheduler().runTaskTimer(plugin, task -> {
             if (N.isSimilar(inventory.getItem(YN1_SLOT))) {
                 inventory.setItem(TIMER_SLOT, BORDER);
-                inventory.setItem(YN2_SLOT, N);
+                otherHolder.getInventory().setItem(TIMER_SLOT, BORDER);
+                inventory.setItem(YN1_SLOT, N);
+                otherHolder.getInventory().setItem(YN2_SLOT, N);
                 task.cancel();
             }
 
-            if (N.isSimilar(inventory.getItem(YN2_SLOT))) {
+            if (N.isSimilar(otherHolder.getInventory().getItem(YN1_SLOT))) {
                 inventory.setItem(TIMER_SLOT, BORDER);
-                inventory.setItem(YN1_SLOT, N);
+                otherHolder.getInventory().setItem(TIMER_SLOT, BORDER);
+                inventory.setItem(YN2_SLOT, N);
+                otherHolder.getInventory().setItem(YN1_SLOT, N);
                 task.cancel();
             }
 
             switch (ticks) {
                 case 20:
                     inventory.setItem(TIMER_SLOT, TIME2);
-                    player1.playSound(player1.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1.5f, 0.8f);
-                    player2.playSound(player2.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1.5f, 0.8f);
+                    otherHolder.getInventory().setItem(TIMER_SLOT, TIME2);
+                    playSound(Sound.BLOCK_NOTE_BLOCK_BELL);
                     break;
                 case 40:
                     inventory.setItem(TIMER_SLOT, TIME3);
-                    player1.playSound(player1.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1.5f, 0.8f);
-                    player2.playSound(player2.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1.5f, 0.8f);
+                    otherHolder.getInventory().setItem(TIMER_SLOT, TIME3);
+                    playSound(Sound.BLOCK_NOTE_BLOCK_BELL);
                     break;
                 case 60:
-                    successTrade();
+                    success();
+                    otherHolder.success();
                     task.cancel();
                     break;
             }
@@ -213,58 +217,34 @@ public class TradeInventory implements InventoryHolder {
         }, 0, 1);
     }
 
-    private void successTrade() {
+    private void success() {
         isEnd = true;
-        player1.playSound(player1.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.5f, 0.8f);
-        player2.playSound(player2.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.5f, 0.8f);
-
-        player1.sendMessage(ChatColor.YELLOW + "거래가 완료되었습니다!");
-        player2.sendMessage(ChatColor.YELLOW + "거래가 완료되었습니다!");
-
-        for (int i : PLAYER1_SLOT) {
+        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.5f, 0.8f);
+        player.sendMessage(ChatColor.YELLOW + "거래가 완료되었습니다!");
+        for (int i : OTHER_SLOT) {
             ItemStack item = inventory.getItem(i);
             if (!(item == null || item.getType().isAir())) {
-                player2.getInventory().addItem(item);
+                player.getInventory().addItem(item);
             }
         }
-
-        for (int i : PLAYER2_SLOT) {
-            ItemStack item = inventory.getItem(i);
-            if (!(item == null || item.getType().isAir())) {
-                player1.getInventory().addItem(item);
-            }
-        }
-
-        player1.getInventory().close();
-        player2.getInventory().close();
+        player.getInventory().close();
     }
 
     public void onClose(InventoryCloseEvent e) {
         if (isEnd) return;
         isEnd = true;
 
-        for (int i : PLAYER1_SLOT) {
+        for (int i : MY_SLOT) {
             ItemStack item = inventory.getItem(i);
             if (!(item == null || item.getType().isAir())) {
-                player1.getInventory().addItem(item);
+                player.getInventory().addItem(item);
             }
         }
 
-        for (int i : PLAYER2_SLOT) {
-            ItemStack item = inventory.getItem(i);
-            if (!(item == null || item.getType().isAir())) {
-                player2.getInventory().addItem(item);
-            }
-        }
-
-        if (e.getPlayer().getUniqueId().equals(player1.getUniqueId())) {
-            player2.getInventory().close();
-            player2.playSound(player2.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.5f, 0.8f);
-            player2.sendMessage(ChatColor.YELLOW + "상대방이 거래를 취소했습니다.");
-        } else {
-            player1.getInventory().close();
-            player1.playSound(player1.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.5f, 0.8f);
-            player1.sendMessage(ChatColor.YELLOW + "상대방이 거래를 취소했습니다.");
+        if (!otherHolder.isEnd()) {
+            otherHolder.getInventory().close();
+            otherHolder.getPlayer().playSound(otherHolder.getPlayer().getLocation(), Sound.ENTITY_VILLAGER_NO, 1.5f, 0.8f);
+            otherHolder.getPlayer().sendMessage(ChatColor.YELLOW + "상대방이 거래를 취소했습니다.");
         }
     }
 }

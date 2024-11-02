@@ -1,7 +1,7 @@
 name: NanoCore
 version: '${project.version}'
 main: gg.mc.nanoserver.nanoCore.NanoCore
-api-version: '1.20.1'
+api-version: '1.20'
 author: GloomyCloud
 commands:
   거래:
