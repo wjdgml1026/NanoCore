@@ -15,7 +15,6 @@ import static gg.mc.nanoserver.nanoCore.NanoCore.tradeManager;
 public class TradeCommand implements CommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args) {
-        plugin.getLogger().info(Arrays.toString(args));
         if (sender instanceof Player player && args.length == 2) {
             if (args[0].equals("수락")) {
                 tradeManager.accept(player, UUID.fromString(args[1]));
