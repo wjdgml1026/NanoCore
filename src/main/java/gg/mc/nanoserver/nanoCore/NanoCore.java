@@ -1,6 +1,7 @@
 package gg.mc.nanoserver.nanoCore;
 
 import gg.mc.nanoserver.nanoCore.command.TradeCommand;
+import gg.mc.nanoserver.nanoCore.command.UpgradeCommand;
 import gg.mc.nanoserver.nanoCore.listener.EntityListener;
 import gg.mc.nanoserver.nanoCore.listener.InventoryEvents;
 import gg.mc.nanoserver.nanoCore.manager.TradeManager;
@@ -19,6 +20,7 @@ public final class NanoCore extends JavaPlugin {
         tradeManager = new TradeManager();
 
         Objects.requireNonNull(getCommand("거래")).setExecutor(new TradeCommand());
+        Objects.requireNonNull(getCommand("강화")).setExecutor(new UpgradeCommand());
         getServer().getPluginManager().registerEvents(new InventoryEvents(), this);
         getServer().getPluginManager().registerEvents(new EntityListener(), this);
     }
