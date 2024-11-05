@@ -3,21 +3,17 @@ package gg.mc.nanoserver.nanoCore.holder;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.inventory.InventoryMoveItemEvent;
+import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.PrimitiveIterator;
-import java.util.Set;
+import java.util.*;
 
 import static gg.mc.nanoserver.nanoCore.NanoCore.plugin;
 
@@ -28,7 +24,8 @@ public class TradeInventory implements InventoryHolder {
             45, 46, 48, 49, 50, 52, 53
     };
 
-    private final static Set<Integer> MY_SLOT = new HashSet<>(Arrays.asList(39, 38, 37, 30, 29, 28, 21, 20, 19, 12, 11, 10));
+    private final static List<Integer> MY_SLOT_INDEX = Arrays.asList(39, 38, 37, 30, 29, 28, 21, 20, 19, 12, 11, 10);
+    private final static Set<Integer> MY_SLOT = new HashSet<>(MY_SLOT_INDEX);
     private final static Set<Integer> OTHER_SLOT = new HashSet<>(Arrays.asList(43, 42, 41, 34, 33, 32, 25, 24, 23, 16, 15, 14));
 
     private final int YN1_SLOT = 47;
@@ -139,8 +136,26 @@ public class TradeInventory implements InventoryHolder {
     }
 
     public void onClick(InventoryClickEvent e) {
-        if (e.getWhoClicked().getInventory().equals(e.getClickedInventory()))
+        if (e.getWhoClicked().getInventory().equals(e.getClickedInventory())) {
+            if (e.getClick().isShiftClick()) {
+                e.setCancelled(true);
+                for (int i : MY_SLOT_INDEX) {
+                    ItemStack item = inventory.getItem(i);
+                    final int slot = i;
+                    if (item == null || item.getType().isEmpty() || item.getType().isAir()) {
+                        inventory.setItem(i, e.getCurrentItem());
+                        e.getWhoClicked().getInventory().clear(e.getSlot());
+                        plugin.getServer().getScheduler().runTaskTimer(plugin, task -> {
+                            otherHolder.getInventory().setItem(slot + 4, inventory.getItem(slot));
+                            task.cancel();
+                        }, 1, 1);
+                        break;
+                    }
+                }
+            }
             return;
+        }
+
         if (MY_SLOT.contains(e.getSlot())) {
             if (!BORDER.isSimilar(inventory.getItem(TIMER_SLOT))) {
                 inventory.setItem(TIMER_SLOT, BORDER);
@@ -153,11 +168,9 @@ public class TradeInventory implements InventoryHolder {
 
                 playSound(Sound.ENTITY_VILLAGER_NO);
             }
-//            player.playSound(player.getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_ON, 2f, 0.8f);
-            final int slot = e.getSlot();
+            final int slot = e.getSlot() + 4;
             plugin.getServer().getScheduler().runTaskTimer(plugin, task -> {
-                otherHolder.getInventory().setItem(slot + 4, inventory.getItem(slot));
-//                otherHolder.getPlayer().playSound(otherHolder.getPlayer().getLocation(), Sound.BLOCK_STONE_BUTTON_CLICK_ON, 2f, 0.8f);
+                otherHolder.getInventory().setItem(slot, inventory.getItem(slot));
                 task.cancel();
             }, 1, 1);
             return;
@@ -221,8 +234,8 @@ public class TradeInventory implements InventoryHolder {
                     playSound(Sound.BLOCK_NOTE_BLOCK_BELL);
                     break;
                 case 80:
-                    taskEnd();
                     task.cancel();
+                    taskEnd();
                     break;
             }
             ticks++;
@@ -255,8 +268,10 @@ public class TradeInventory implements InventoryHolder {
             return;
         }
 
-        success();
-        otherHolder.success();
+        String log = "거래 로그 \n" +
+                "[ " + player.getName() + " ] <<>> " + "[ " + otherHolder.getPlayer().getName() + " ]\n" +
+                success() +  otherHolder.success();
+        plugin.getLogger().info(log);
     }
 
     private boolean isFull(int empty, int count) {
@@ -275,7 +290,8 @@ public class TradeInventory implements InventoryHolder {
         }
     }
 
-    private void success() {
+    private String success() {
+        StringBuilder result = new StringBuilder(player.getName() + " >> " + otherHolder.getPlayer().getName());
         isEnd = true;
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.5f, 0.8f);
         player.sendMessage(ChatColor.YELLOW + "거래가 완료되었습니다!");
@@ -283,9 +299,47 @@ public class TradeInventory implements InventoryHolder {
             ItemStack item = inventory.getItem(i);
             if (!(item == null || item.getType().isAir())) {
                 player.getInventory().addItem(item);
+                result.append("\n > ").append(item.getAmount()).append(" × ").append(item.getType());
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    if (meta.hasCustomModelData()) {
+                        result.append("(").append(meta.getCustomModelData()).append(")");
+                    }
+                    if (meta.hasDisplayName()) {
+                        result.append(" :: ").append(meta.getDisplayName());
+                    }
+                    if (meta.getLore() != null) {
+                        result.append(" [ '").append(String.join("', '", meta.getLore())).append("' ] ");
+                    }
+
+                    Map<Enchantment, Integer> enchants = meta.getEnchants();
+                    if (!enchants.isEmpty()) {
+                        result.append(" | [");
+                        for (Map.Entry<Enchantment, Integer> entry : enchants.entrySet()) {
+                            String enchantment = entry.getKey().getKey().getKey();
+                            int level = entry.getValue();
+                            result.append(" ").append(enchantment).append(":").append(level);
+                        }
+                        result.append(" ]");
+                    }
+
+                    if (meta instanceof EnchantmentStorageMeta enchantmentStorageMeta) {
+                        Map<Enchantment, Integer> storedEnchants = enchantmentStorageMeta.getStoredEnchants();
+                        if (!storedEnchants.isEmpty()) {
+                            result.append(" | [");
+                            for (Map.Entry<Enchantment, Integer> entry : storedEnchants.entrySet()) {
+                                String enchantment = entry.getKey().getKey().getKey();
+                                int level = entry.getValue();
+                                result.append(" ").append(enchantment).append(":").append(level);
+                            }
+                            result.append(" ]");
+                        }
+                    }
+                }
             }
         }
         player.getInventory().close();
+        return result.append("\n").toString();
     }
 
     public void onClose(InventoryCloseEvent e) {

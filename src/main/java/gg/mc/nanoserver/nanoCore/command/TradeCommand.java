@@ -6,10 +6,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
 import java.util.UUID;
 
-import static gg.mc.nanoserver.nanoCore.NanoCore.plugin;
 import static gg.mc.nanoserver.nanoCore.NanoCore.tradeManager;
 
 public class TradeCommand implements CommandExecutor {
