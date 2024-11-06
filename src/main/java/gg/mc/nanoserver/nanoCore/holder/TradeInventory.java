@@ -1,5 +1,6 @@
 package gg.mc.nanoserver.nanoCore.holder;
 
+import gg.mc.nanoserver.nanoCore.interfaces.CustomInventory;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -7,7 +8,6 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -17,7 +17,7 @@ import java.util.*;
 
 import static gg.mc.nanoserver.nanoCore.NanoCore.plugin;
 
-public class TradeInventory implements InventoryHolder {
+public class TradeInventory implements CustomInventory {
     private final static ItemStack BORDER, EMPTY, Y, N, TIME1, TIME2, TIME3, FULL;
     private final static int[] BORDER_SLOT = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
             18, 27, 36, 13, 22, 31, 40, 17, 26, 35, 44,
@@ -131,11 +131,8 @@ public class TradeInventory implements InventoryHolder {
         return isEnd;
     }
 
-    public void onDrag(InventoryDragEvent e) {
-        e.setCancelled(true);
-    }
-
-    public void onClick(InventoryClickEvent e) {
+    @Override
+    public void onInventoryClick(InventoryClickEvent e) {
         if (e.getWhoClicked().getInventory().equals(e.getClickedInventory())) {
             if (e.getClick().isShiftClick()) {
                 e.setCancelled(true);
@@ -342,7 +339,8 @@ public class TradeInventory implements InventoryHolder {
         return result.append("\n").toString();
     }
 
-    public void onClose(InventoryCloseEvent e) {
+    @Override
+    public void onInventoryClose(InventoryCloseEvent e) {
         if (isEnd) return;
         isEnd = true;
 

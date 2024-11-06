@@ -54,7 +54,7 @@ public class TradeManager {
             } else if (ticks[0] == TRADE_TIMER) {
                 request.remove(player.getUniqueId());
                 target.playSound(player.getLocation(), Sound.ENTITY_WANDERING_TRADER_NO, 1.5f, 0.8f);
-                target.sendMessage(ChatColor.RED + player.getName() + " 님이 보낸 거래 요청이 만료됬습니다...");;
+                target.sendMessage(ChatColor.RED + player.getName() + " 님이 보낸 거래 요청이 만료됬습니다...");
                 player.playSound(player.getLocation(), Sound.ENTITY_WANDERING_TRADER_NO, 1.5f, 0.8f);
                 player.sendMessage(ChatColor.RED + target.getName() + " 님에게 보낸 거래 요청이 만료됬습니다...");
                 task.cancel();
