@@ -1,5 +1,6 @@
 package gg.mc.nanoserver.nanoCore;
 
+import de.tr7zw.changeme.nbtapi.NBT;
 import gg.mc.nanoserver.nanoCore.command.TradeCommand;
 import gg.mc.nanoserver.nanoCore.command.UpgradeCommand;
 import gg.mc.nanoserver.nanoCore.listener.EntityListener;
@@ -18,6 +19,12 @@ public final class NanoCore extends JavaPlugin {
         // Plugin startup logic
         plugin = this;
         tradeManager = new TradeManager();
+
+        if (!NBT.preloadApi()) {
+            getLogger().warning("NBT-API wasn't initialized properly, disabling the plugin");
+            getPluginLoader().disablePlugin(this);
+            return;
+        }
 
         Objects.requireNonNull(getCommand("거래")).setExecutor(new TradeCommand());
         Objects.requireNonNull(getCommand("강화")).setExecutor(new UpgradeCommand());

@@ -272,7 +272,6 @@ public class TradeInventory implements CustomInventory {
     }
 
     private boolean isFull(int empty, int count) {
-        plugin.getLogger().info(empty + "/" + count);
         if (empty < count) {
             this.playSound(Sound.BLOCK_DISPENSER_FAIL);
             inventory.setItem(YN1_SLOT, N);
