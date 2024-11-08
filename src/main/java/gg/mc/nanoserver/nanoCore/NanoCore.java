@@ -5,6 +5,7 @@ import gg.mc.nanoserver.nanoCore.command.TradeCommand;
 import gg.mc.nanoserver.nanoCore.command.UpgradeCommand;
 import gg.mc.nanoserver.nanoCore.listener.EntityListener;
 import gg.mc.nanoserver.nanoCore.listener.InventoryEvents;
+import gg.mc.nanoserver.nanoCore.listener.ItemsAdderEvents;
 import gg.mc.nanoserver.nanoCore.manager.TradeManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -22,7 +23,6 @@ public final class NanoCore extends JavaPlugin {
 
         if (!NBT.preloadApi()) {
             getLogger().warning("NBT-API wasn't initialized properly, disabling the plugin");
-            getPluginLoader().disablePlugin(this);
             return;
         }
 
@@ -30,6 +30,7 @@ public final class NanoCore extends JavaPlugin {
         Objects.requireNonNull(getCommand("강화")).setExecutor(new UpgradeCommand());
         getServer().getPluginManager().registerEvents(new InventoryEvents(), this);
         getServer().getPluginManager().registerEvents(new EntityListener(), this);
+        getServer().getPluginManager().registerEvents(new ItemsAdderEvents(), this);
     }
 
     @Override

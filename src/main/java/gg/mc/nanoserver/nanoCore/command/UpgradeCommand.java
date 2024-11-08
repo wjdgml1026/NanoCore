@@ -11,16 +11,8 @@ public class UpgradeCommand implements CommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args) {
         if (sender instanceof Player player) {
-            if (args.length > 0) {
-                if (args[0].equalsIgnoreCase("강화권")
-                        && player.hasPermission("nano.upgrade")
-                ) {
-                    ((Player) sender).getInventory().addItem(UpgradeInventory.MATERIAL);
-                }
-            } else {
-                UpgradeInventory holder = new UpgradeInventory(player);
-                player.openInventory(holder.getInventory());
-            }
+            UpgradeInventory holder = new UpgradeInventory(player);
+            player.openInventory(holder.getInventory());
             return true;
         }
         return false;

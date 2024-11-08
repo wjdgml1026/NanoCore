@@ -18,7 +18,7 @@ import java.util.*;
 import static gg.mc.nanoserver.nanoCore.NanoCore.plugin;
 
 public class TradeInventory implements CustomInventory {
-    private final static ItemStack BORDER, EMPTY, Y, N, TIME1, TIME2, TIME3, FULL;
+    private final static ItemStack BORDER, Y, N, TIME1, TIME2, TIME3, FULL;
     private final static int[] BORDER_SLOT = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
             18, 27, 36, 13, 22, 31, 40, 17, 26, 35, 44,
             45, 46, 48, 49, 50, 52, 53
@@ -48,11 +48,6 @@ public class TradeInventory implements CustomInventory {
         itemMeta.setDisplayName(" ");
         BORDER.setItemMeta(itemMeta);
 
-        EMPTY = new ItemStack(Material.WHITE_STAINED_GLASS_PANE);
-        itemMeta = EMPTY.getItemMeta();
-        itemMeta.setDisplayName(" ");
-        EMPTY.setItemMeta(itemMeta);
-
         Y = new ItemStack(Material.GREEN_STAINED_GLASS_PANE);
         itemMeta = Y.getItemMeta();
         itemMeta.setDisplayName(ChatColor.GREEN + "찬성" + ChatColor.WHITE + " / " + ChatColor.GRAY + "반대");
@@ -63,19 +58,22 @@ public class TradeInventory implements CustomInventory {
         itemMeta.setDisplayName(ChatColor.GRAY + "찬성" + ChatColor.WHITE + " / " + ChatColor.RED + "반대");
         N.setItemMeta(itemMeta);
 
-        TIME1 = new ItemStack(Material.YELLOW_DYE);
+        TIME1 = new ItemStack(Material.COAL);
         itemMeta = TIME1.getItemMeta();
         itemMeta.setDisplayName(ChatColor.YELLOW + "3초 남았습니다.");
+        itemMeta.setCustomModelData(13);
         TIME1.setItemMeta(itemMeta);
 
-        TIME2 = new ItemStack(Material.ORANGE_DYE);
+        TIME2 = new ItemStack(Material.COAL);
         itemMeta = TIME2.getItemMeta();
         itemMeta.setDisplayName(ChatColor.GOLD + "2초 남았습니다.");
+        itemMeta.setCustomModelData(12);
         TIME2.setItemMeta(itemMeta);
 
-        TIME3 = new ItemStack(Material.RED_DYE);
+        TIME3 = new ItemStack(Material.COAL);
         itemMeta = TIME3.getItemMeta();
         itemMeta.setDisplayName(ChatColor.RED + "1초 남았습니다.");
+        itemMeta.setCustomModelData(11);
         TIME3.setItemMeta(itemMeta);
 
         FULL = new ItemStack(Material.BARRIER);
@@ -136,6 +134,10 @@ public class TradeInventory implements CustomInventory {
         if (e.getWhoClicked().getInventory().equals(e.getClickedInventory())) {
             if (e.getClick().isShiftClick()) {
                 e.setCancelled(true);
+                if (ticks > 0) {
+                    cancel();
+                    playSound(Sound.ENTITY_VILLAGER_NO);
+                }
                 for (int i : MY_SLOT_INDEX) {
                     ItemStack item = inventory.getItem(i);
                     final int slot = i;
@@ -154,20 +156,13 @@ public class TradeInventory implements CustomInventory {
         }
 
         if (MY_SLOT.contains(e.getSlot())) {
-            if (!BORDER.isSimilar(inventory.getItem(TIMER_SLOT))) {
-                inventory.setItem(TIMER_SLOT, BORDER);
-                otherHolder.getInventory().setItem(TIMER_SLOT, BORDER);
-
-                inventory.setItem(YN1_SLOT, N);
-                inventory.setItem(YN2_SLOT, N);
-                otherHolder.getInventory().setItem(YN1_SLOT, N);
-                otherHolder.getInventory().setItem(YN2_SLOT, N);
-
+            if (ticks > 0) {
+                cancel();
                 playSound(Sound.ENTITY_VILLAGER_NO);
             }
-            final int slot = e.getSlot() + 4;
+            final int i = e.getSlot();
             plugin.getServer().getScheduler().runTaskTimer(plugin, task -> {
-                otherHolder.getInventory().setItem(slot, inventory.getItem(slot));
+                otherHolder.getInventory().setItem(i + 4, inventory.getItem(i));
                 task.cancel();
             }, 1, 1);
             return;
@@ -199,18 +194,12 @@ public class TradeInventory implements CustomInventory {
 
         plugin.getServer().getScheduler().runTaskTimer(plugin, task -> {
             if (N.isSimilar(inventory.getItem(YN1_SLOT))) {
-                inventory.setItem(TIMER_SLOT, BORDER);
-                otherHolder.getInventory().setItem(TIMER_SLOT, BORDER);
-                inventory.setItem(YN1_SLOT, N);
-                otherHolder.getInventory().setItem(YN2_SLOT, N);
+                cancel();
                 task.cancel();
             }
 
             if (N.isSimilar(otherHolder.getInventory().getItem(YN1_SLOT))) {
-                inventory.setItem(TIMER_SLOT, BORDER);
-                otherHolder.getInventory().setItem(TIMER_SLOT, BORDER);
-                inventory.setItem(YN2_SLOT, N);
-                otherHolder.getInventory().setItem(YN1_SLOT, N);
+                cancel();
                 task.cancel();
             }
 
@@ -237,6 +226,16 @@ public class TradeInventory implements CustomInventory {
             }
             ticks++;
         }, 0, 1);
+    }
+
+    private void cancel() {
+        inventory.setItem(TIMER_SLOT, BORDER);
+        otherHolder.getInventory().setItem(TIMER_SLOT, BORDER);
+        inventory.setItem(YN1_SLOT, N);
+        inventory.setItem(YN2_SLOT, N);
+        otherHolder.getInventory().setItem(YN1_SLOT, N);
+        otherHolder.getInventory().setItem(YN2_SLOT, N);
+        ticks = 0;
     }
 
     private void taskEnd() {

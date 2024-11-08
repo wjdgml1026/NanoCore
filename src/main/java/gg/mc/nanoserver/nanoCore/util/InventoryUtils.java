@@ -4,8 +4,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Objects;
-
 public class InventoryUtils {
     public static int countItems(@NotNull Inventory inventory, @NotNull ItemStack item) {
         int count = 0;
