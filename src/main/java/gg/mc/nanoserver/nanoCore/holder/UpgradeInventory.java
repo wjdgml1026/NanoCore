@@ -30,12 +30,14 @@ public class UpgradeInventory implements CustomInventory {
     private final static ItemStack PREV_ITEM, NEXT_ITEM;
     private final static ItemStack YELLOW, LIME, WHITE;
     private static ItemStack anvil;
-    private final static HashMap<Material, String> ITEM_NAME = new HashMap<>();
-    private final static int[] SUCCESS = {100, 90, 80, 70, 50, 40, 30, 20, 10, 5};
-    private final static int[] BROKEN = {0, 0, 2, 6, 15, 24, 28, 40, 54, 66};
+    private final static HashMap<Material, String> ITEMS = new HashMap<>();
+    private final static int[] SUCCESS = {100, 80, 70, 50, 45, 35, 20, 10, 7, 5};
+    private final static int[] BROKEN = {0, 5, 7, 10, 15, 20, 35, 50, 60, 80};
     private final static int PREV_ITEM_SLOT = 11;
     private final static int ANVIL_SLOT = 13;
     private final static int NEXT_ITEM_SLOT = 15;
+
+    public final static int[] SWORD_DAMAGE = {0, 1, 2, 3, 5, 7, 8, 10, 12, 15, 20}; // 0 ~ 10
 
     private final Inventory inventory;
     private final Player player;
@@ -61,12 +63,41 @@ public class UpgradeInventory implements CustomInventory {
 //        itemMeta.setCustomModelData(100);
 //        MATERIAL.setItemMeta(itemMeta);
 
-        ITEM_NAME.put(Material.NETHERITE_SWORD, "네더라이트 검");
-        ITEM_NAME.put(Material.NETHERITE_HELMET, "네더라이트 투구");
-        ITEM_NAME.put(Material.NETHERITE_CHESTPLATE, "네더라이트 흉갑");
-        ITEM_NAME.put(Material.NETHERITE_LEGGINGS, "네더라이트 레깅스");
-        ITEM_NAME.put(Material.NETHERITE_BOOTS, "네더라이트 부츠");
-        ITEM_NAME.put(Material.BOW, "활");
+        ITEMS.put(Material.WOODEN_SWORD, "나무 검");
+        ITEMS.put(Material.LEATHER_HELMET, "가죽 투구");
+        ITEMS.put(Material.LEATHER_CHESTPLATE, "가죽 흉갑");
+        ITEMS.put(Material.LEATHER_LEGGINGS, "가죽 레깅스");
+        ITEMS.put(Material.LEATHER_BOOTS, "가죽 부츠");
+
+        ITEMS.put(Material.STONE_SWORD, "돌 검");
+        ITEMS.put(Material.CHAINMAIL_HELMET, "사슬 투구");
+        ITEMS.put(Material.CHAINMAIL_CHESTPLATE, "사슬 흉갑");
+        ITEMS.put(Material.CHAINMAIL_LEGGINGS, "사슬 레깅스");
+        ITEMS.put(Material.CHAINMAIL_BOOTS, "사슬 부츠");
+
+        ITEMS.put(Material.IRON_SWORD, "철 검");
+        ITEMS.put(Material.IRON_HELMET, "철 투구");
+        ITEMS.put(Material.IRON_CHESTPLATE, "철 흉갑");
+        ITEMS.put(Material.IRON_LEGGINGS, "철 레깅스");
+        ITEMS.put(Material.IRON_BOOTS, "철 부츠");
+
+        ITEMS.put(Material.GOLDEN_SWORD, "금 검");
+        ITEMS.put(Material.GOLDEN_HELMET, "금 투구");
+        ITEMS.put(Material.GOLDEN_CHESTPLATE, "금 흉갑");
+        ITEMS.put(Material.GOLDEN_LEGGINGS, "금 레깅스");
+        ITEMS.put(Material.GOLDEN_BOOTS, "금 부츠");
+
+        ITEMS.put(Material.DIAMOND_SWORD, "다이아몬드 검");
+        ITEMS.put(Material.DIAMOND_HELMET, "다이아몬드 투구");
+        ITEMS.put(Material.DIAMOND_CHESTPLATE, "다이아몬드 흉갑");
+        ITEMS.put(Material.DIAMOND_LEGGINGS, "다이아몬드 레깅스");
+        ITEMS.put(Material.DIAMOND_BOOTS, "다이아몬드 부츠");
+
+        ITEMS.put(Material.NETHERITE_SWORD, "네더라이트 검");
+        ITEMS.put(Material.NETHERITE_HELMET, "네더라이트 투구");
+        ITEMS.put(Material.NETHERITE_CHESTPLATE, "네더라이트 흉갑");
+        ITEMS.put(Material.NETHERITE_LEGGINGS, "네더라이트 레깅스");
+        ITEMS.put(Material.NETHERITE_BOOTS, "네더라이트 부츠");
 
         YELLOW = new ItemStack(Material.YELLOW_STAINED_GLASS_PANE);
         itemMeta = YELLOW.getItemMeta();
@@ -126,20 +157,13 @@ public class UpgradeInventory implements CustomInventory {
         if (player.getInventory().equals(e.getClickedInventory())) {
             ItemStack itemStack = e.getCurrentItem();
             if (itemStack != null) {
-                switch (itemStack.getType()) {
-                    case NETHERITE_SWORD:
-                    case NETHERITE_HELMET:
-                    case NETHERITE_CHESTPLATE:
-                    case NETHERITE_LEGGINGS:
-                    case NETHERITE_BOOTS:
-                    case BOW:
-                        ItemStack item = inventory.getItem(PREV_ITEM_SLOT);
-                        if ( item != null && !PREV_ITEM.isSimilar(item)) {
-                            giveItem();
-                            init();
-                        }
-                        setUpgradeItem(itemStack, e.getSlot());
-                        break;
+                if (ITEMS.containsKey(itemStack.getType())) {
+                    ItemStack item = inventory.getItem(PREV_ITEM_SLOT);
+                    if ( item != null && !PREV_ITEM.isSimilar(item)) {
+                        giveItem();
+                        init();
+                    }
+                    setUpgradeItem(itemStack.clone(), e.getSlot());
                 }
             }
         } else {
@@ -160,35 +184,40 @@ public class UpgradeInventory implements CustomInventory {
                 }
                 InventoryUtils.removeItems(player.getInventory(), MATERIAL);
 
-                int success = lv < 10 ? SUCCESS[lv-1] : 1;
-                int broken = lv < 10 ? BROKEN[lv-1] : 70;
                 int n = player.hasPermission("nano.upgrade") ? 0 : RANDOM.nextInt(100);
-
-                if (n < success) {
+                if (n < SUCCESS[lv-1]) {
+                    // 성공
                     item.setAmount(1);
                     setUpgradeItem(item, slot);
-                    if (lv > 10) {
+                    if (lv == 0) {
                         giveItem();
                         init();
-
                         TextComponent message = Component.text()
                                 .append(Component.text(player.getName(), NamedTextColor.GOLD))
                                 .append(Component.text("님이 ", NamedTextColor.YELLOW))
-                                .append(Component.text(ITEM_NAME.getOrDefault(item.getType(), "강화"), NamedTextColor.AQUA))
+                                .append(Component.text(ITEMS.getOrDefault(item.getType(), "강화"), NamedTextColor.AQUA))
                                 .append(Component.text(" 10강을 달성하였습니다.", NamedTextColor.YELLOW))
                                 .build();
                         for (Player p : plugin.getServer().getOnlinePlayers()) {
                             p.sendMessage(message);
-                            p.playSound(player, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.5f, 1.0f);
                         }
+                        player.playSound(player, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.5f, 1.0f);
+                    } else if (!item.getType().name().endsWith("_SWORD") && lv == 0) {
+                        giveItem();
+                        init();
+                        player.playSound(player, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.5f, 1.0f);
                     } else {
                         player.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1.5f, 1.0f);
                     }
-                } else if (n < 100 - broken) {
-                    player.playSound(player, Sound.BLOCK_ANVIL_BREAK, 1.2f, 1.0f);
                 } else {
-                    player.playSound(player, Sound.BLOCK_ANVIL_DESTROY, 1.2f, 1.0f);
-                    init();
+                    // 실패
+                    if (RANDOM.nextInt(100) < BROKEN[lv-1]) {
+                        // 파괴
+                        player.playSound(player, Sound.BLOCK_ANVIL_DESTROY, 1.2f, 1.0f);
+                        init();
+                    } else {
+                        player.playSound(player, Sound.BLOCK_ANVIL_BREAK, 1.2f, 1.0f);
+                    }
                 }
             }
         }
@@ -199,15 +228,44 @@ public class UpgradeInventory implements CustomInventory {
             lv = nbt.getOrDefault("UpgradeLevel", 0);
         });
 
-        if (lv > 9 && this.slot == -1) {
-            lv = 0;
-            return;
-        } else if (lv > 1) {
+        if (lv > 1) {
             item.setAmount(lv);
+        }
+        inventory.setItem(PREV_ITEM_SLOT, item);
+
+        if ( item.getType().name().endsWith("_SWORD") ) {
+            if ( lv >= 10 ){
+                lv = 0;
+                if (this.slot == -1) {
+                    init();
+                }
+                return;
+            }
+        } else {
+            if ( lv >= 5 ){
+                lv = 0;
+                if (this.slot == -1) {
+                    init();
+                }
+                return;
+            }
+        }
+
+        String name;
+        ItemMeta itemMeta = item.getItemMeta();
+        if (itemMeta.hasDisplayName()) {
+            name = itemMeta.getDisplayName();
+            if (name.endsWith(" §e+" + lv)) {
+                name = name.substring(0, name.length() - 5);
+            }
+        } else {
+            name = ChatColor.AQUA + ITEMS.getOrDefault(item.getType(), "아이템");
         }
 
         lv++;
+        itemMeta.setDisplayName(name + " §e+" + lv);
         ItemStack newItem = item.clone();
+        newItem.setItemMeta(itemMeta);
         NBT.modify(newItem, nbt -> {
             nbt.setInteger("UpgradeLevel", lv);
             nbt.modifyMeta((readOnlyNbt, meta) -> {
@@ -215,20 +273,20 @@ public class UpgradeInventory implements CustomInventory {
             });
         });
         newItem.setAmount(lv);
-
-        inventory.setItem(PREV_ITEM_SLOT, item);
         inventory.setItem(NEXT_ITEM_SLOT, newItem);
 
         player.getInventory().clear(slot);
         this.slot = slot;
 
-        if (lv < 10) {
+        if (lv <= 10) {
             ItemMeta meta = anvil.getItemMeta();
             ArrayList<String> lore = new ArrayList<>();
             lore.add(ChatColor.GRAY + "--------------------");
             lore.add(ChatColor.AQUA + "성공 확률 " + SUCCESS[lv-1] + "%");
-            lore.add(ChatColor.RED + "실패 확률 " + (100 - SUCCESS[lv-1] - BROKEN[lv-1]) + "%");
-            lore.add(ChatColor.GRAY + "파괴 확률 " + BROKEN[lv-1] + "%");
+            int fail = 100 - SUCCESS[lv-1];
+            int broken = fail * BROKEN[lv-1] / 100;
+            lore.add(ChatColor.RED + "실패 확률 " + (fail - broken) + "%");
+            lore.add(ChatColor.GRAY + "파괴 확률 " + broken + "%");
             lore.add(ChatColor.GRAY + "--------------------");
             if (lv > 1) {
                 lore.addAll(buildLore(item.getType(), lv-1));
@@ -252,19 +310,14 @@ public class UpgradeInventory implements CustomInventory {
         ArrayList<String> lore = new ArrayList<>();
         lore.add("");
         lore.add(ChatColor.YELLOW + "강화 Lv " + lv);
-        lore.add(ChatColor.YELLOW + "★".repeat(Math.min(lv, 10)) + "☆".repeat(Math.max(10-lv, 0)));
-        lore.add("");
-        switch (type) {
-            case NETHERITE_SWORD:
-            case BOW:
-                lore.add(ChatColor.RED + "+" + lv + " 공격 피해");
-                break;
-            case NETHERITE_HELMET:
-            case NETHERITE_CHESTPLATE:
-            case NETHERITE_LEGGINGS:
-            case NETHERITE_BOOTS:
-                lore.add(ChatColor.RED + "+" + lv + " 피해 감소");
-                break;
+        if (type.name().endsWith("_SWORD")) {
+            lore.add(ChatColor.YELLOW + "★".repeat(Math.min(lv, 10)) + "☆".repeat(Math.max(10-lv, 0)));
+            lore.add("");
+            lore.add(ChatColor.RED + "+" + SWORD_DAMAGE[lv] + " 공격 피해");
+        } else {
+            lore.add(ChatColor.YELLOW + "★".repeat(Math.min(lv, 5)) + "☆".repeat(Math.max(5-lv, 0)));
+            lore.add("");
+            lore.add(ChatColor.RED + String.format("%.1f%% 피해 감소", lv * 2.5));
         }
         return lore;
     }
