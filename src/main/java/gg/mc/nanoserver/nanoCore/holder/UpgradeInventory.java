@@ -57,12 +57,6 @@ public class UpgradeInventory implements CustomInventory {
         itemMeta.setDisplayName("결과");
         NEXT_ITEM.setItemMeta(itemMeta);
 
-//        MATERIAL = new ItemStack(Material.PAPER);
-//        itemMeta = MATERIAL.getItemMeta();
-//        itemMeta.setDisplayName(ChatColor.AQUA + "강화석");
-//        itemMeta.setCustomModelData(100);
-//        MATERIAL.setItemMeta(itemMeta);
-
         ITEMS.put(Material.WOODEN_SWORD, "나무 검");
         ITEMS.put(Material.LEATHER_HELMET, "가죽 투구");
         ITEMS.put(Material.LEATHER_CHESTPLATE, "가죽 흉갑");
@@ -212,11 +206,10 @@ public class UpgradeInventory implements CustomInventory {
                 } else {
                     // 실패
                     if (RANDOM.nextInt(100) < BROKEN[lv-1]) {
-                        // 파괴
                         player.playSound(player, Sound.BLOCK_ANVIL_DESTROY, 1.2f, 1.0f);
-                        init();
                     } else {
                         player.playSound(player, Sound.BLOCK_ANVIL_BREAK, 1.2f, 1.0f);
+                        init();
                     }
                 }
             }
@@ -268,9 +261,7 @@ public class UpgradeInventory implements CustomInventory {
         newItem.setItemMeta(itemMeta);
         NBT.modify(newItem, nbt -> {
             nbt.setInteger("UpgradeLevel", lv);
-            nbt.modifyMeta((readOnlyNbt, meta) -> {
-                meta.setLore(buildLore(newItem.getType(), lv));
-            });
+            nbt.modifyMeta((readOnlyNbt, meta) -> meta.setLore(buildLore(newItem.getType(), lv)));
         });
         newItem.setAmount(lv);
         inventory.setItem(NEXT_ITEM_SLOT, newItem);
@@ -291,9 +282,15 @@ public class UpgradeInventory implements CustomInventory {
             if (lv > 1) {
                 lore.addAll(buildLore(item.getType(), lv-1));
             } else {
-                lore.add("");
-                lore.add(ChatColor.YELLOW + "강화 Lv 0");
-                lore.add(ChatColor.YELLOW + "☆☆☆☆☆☆☆☆☆☆");
+                if (item.getType().name().endsWith("_SWORD")) {
+                    lore.add("");
+                    lore.add(ChatColor.YELLOW + "강화 Lv 0");
+                    lore.add(ChatColor.YELLOW + "☆☆☆☆☆☆☆☆☆☆");
+                } else {
+                    lore.add("");
+                    lore.add(ChatColor.YELLOW + "강화 Lv 0");
+                    lore.add(ChatColor.YELLOW + "☆☆☆☆☆");
+                }
             }
             lore.add("");
             lore.add(ChatColor.GRAY + "--------------------");

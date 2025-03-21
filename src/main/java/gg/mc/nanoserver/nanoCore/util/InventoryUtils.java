@@ -5,16 +5,6 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 public class InventoryUtils {
-    public static int countItems(@NotNull Inventory inventory, @NotNull ItemStack item) {
-        int count = 0;
-        for (ItemStack i : inventory.getStorageContents()) {
-            if ( i != null && item.isSimilar(i) ) {
-                count += i.getAmount();
-            }
-        }
-        return count;
-    }
-
     public static boolean hasItem(@NotNull Inventory inventory, @NotNull ItemStack item) {
         for (ItemStack i : inventory.getStorageContents()) {
             if ( i != null && item.isSimilar(i) ) {

@@ -2,7 +2,6 @@ package gg.mc.nanoserver.nanoCore.listener;
 
 import de.tr7zw.changeme.nbtapi.NBT;
 import gg.mc.nanoserver.nanoCore.holder.UpgradeInventory;
-import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -30,7 +29,7 @@ public class EntityListener implements Listener {
                 int lv = nbt.getOrDefault("UpgradeLevel", 0);
                 double n = UpgradeInventory.SWORD_DAMAGE[lv];
                 double damage = e.getDamage() + n;
-                if (player.hasPermission("nano.upgrade")) {
+                if (player.hasPermission("nano.parser")) {
                     player.sendMessage(String.format("데미지: %.1f ( +%.1f ) → %.1f", e.getDamage(), n, damage));
                 }
                 e.setDamage(damage);
@@ -56,7 +55,7 @@ public class EntityListener implements Listener {
             }
             double n = 1 - 0.025 * lv[0];
             double damage = e.getDamage() * n;
-            if (player.hasPermission("nano.upgrade")) {
+            if (player.hasPermission("nano.parser")) {
                 player.sendMessage(String.format("데미지: %.1f ( %.1f%% ) → %.1f", e.getDamage(), n*100, damage));
             }
             e.setDamage(damage);
